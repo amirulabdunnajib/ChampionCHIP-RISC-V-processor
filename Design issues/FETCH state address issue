@@ -1,0 +1,17 @@
+Critical Execution & Instruction Flow Issues
+Instruction Fetch Address Logic (IMEM Issue)
+
+Problem: In RISCV_REGISTER_UNIT_V1, the instruction register gets w_32 from RISCV_IMEM_v2. However, RISCV_IMEM_v2 requires i_Addr to match the exact byte addresses (32'h400000, 32'h400004, etc.). The address fed to IMEM comes from RISCV_ADDRESS_DECODER, which forwards i_Addr (derived from w_27 from LSU).
+
+Root Cause: During the FETCH state, the core needs to supply the PC output (o_PC_Output / w_9) as the address to fetch instructions. Currently, w_27 is driven by LSU's mem_address_i, which uses core_address_o (w_3 / RISCV_ALUOUT). At fetch time, ALUOUT holds the result of the previous instruction, not the current PC address. Consequently, IMEM never receives the PC value to return valid instruction hex.
+
+Incorrect Signal Sharing: o_Branch_Sel vs op_size_o
+
+Problem: Wire w_22 connects RISCV_CONTROL_V2.o_Branch_Sel to both RISCV_BRANCH_COMPARATOR and RISCV_LSU_v2.op_size_o.
+
+Root Cause: o_Branch_Sel outputs branch condition codes (e.g., BEQ, BLT), whereas op_size_o expects memory access width encodings (LB, LH, LW, LBU, LHU). Passing branch control signals directly into the LSU causes memory operations (loads/stores) to compute invalid byte masks and misinterpret load sign extensions.
+
+Key Summary of Fixes
+Fetch Muxing: Ensure the Memory Address Decoder receives o_PC_Output during c_STATE_FETCH so IMEM can fetch instructions properly.
+
+LSU Control Separation: Separate the branch selection signal from the load/store unit memory width selection control line.
