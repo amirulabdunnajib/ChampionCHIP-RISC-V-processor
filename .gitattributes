@@ -1,0 +1,2 @@
+# Track the GDSII output with Git LFS (~47.6 MiB binary blob)
+*.gds filter=lfs diff=lfs merge=lfs -text
